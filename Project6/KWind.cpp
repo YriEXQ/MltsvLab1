@@ -1,12 +1,12 @@
 #include "KWind.h"
 
 
-LPCWSTR KWind::GetCName()
+wchar_t* KWind::GetCName()
 {
 	return CName;
 }
 
-LPCWSTR KWind::CreateClass(LPCWSTR szCName, HINSTANCE hInst,
+wchar_t* KWind::CreateClass(LPCWSTR szCName, HINSTANCE hInst,
 	WNDPROC pWndProc, LPCWSTR menuName, UINT classStyle)
 {
 	wC.cbSize = sizeof(wC);
@@ -22,20 +22,21 @@ LPCWSTR KWind::CreateClass(LPCWSTR szCName, HINSTANCE hInst,
 	wC.lpszClassName = szCName;
 	wC.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
 
-	CName = CreateClass(wC);
-
-	return CName;
+	if (CreateClass(wC)){
+		wcscpy_s(CName, (const wchar_t*)wC.lpszClassName);
+		return CName;
+	}
+	else return NULL;
 }
 
-LPCWSTR KWind::CreateClass(WNDCLASSEXW &wC)
+bool KWind::CreateClass(WNDCLASSEXW &wC)
 {
 	
 	if (!RegisterClassExW(&wC)) {
 		MessageBoxW(NULL, L"Cannot register class!", L"Error", MB_OK);
-		return NULL;
+		return false;
 	}
-	CName = wC.lpszClassName;
-	return CName;
+	return true;
 }
 
 HWND KWind::CreateWind(LPCWSTR szClassName, LPCWSTR windowName, 
