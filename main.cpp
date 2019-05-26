@@ -1,7 +1,4 @@
 #include <windows.h>
-#include <fstream>
-#include <iostream>
-#include <cstdio>
 #include <tchar.h>
 
 
